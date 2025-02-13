@@ -1,0 +1,85 @@
+This example demonstrates a basic CUDA program that uses a kernel function to perform element-wise addition on two arrays.
+
+**Example 2: Matrix Multiplication**
+```c
+#include <stdio.h>
+#include <cuda_runtime.h>
+
+// Kernel function to be executed on the GPU
+__global__ void matMulKernel(float *a, float *b, float *c) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < a_size) {
+        for (int j = 0; j < b_size; j++) {
+            c[idx * b_size + j] = 0;
+            for (int k = 0; k < c_size; k++) {
+                c[idx * b_size + j] += a[idx * c_size + k] * b[k * c_size + j];
+            }
+        }
+    }
+}
+
+int main() {
+    int N = 1024, M = 1024;
+    float *h_a, *h_b, *h_c, *d_a, *d_b, *d_c;
+
+    // Host memory allocation
+    h_a = (float *)malloc(N * M * sizeof(float));
+    h_b = (float *)malloc(M * N * sizeof(float));
+    h_c = (float *)malloc(N * M * sizeof(float));
+
+    // Device memory allocation
+    cudaMalloc((void **)&d_a, N * M * sizeof(float));
+    cudaMalloc((void **)&d_b, M * N * sizeof(float));
+    cudaMalloc((void **)&d_c, N * M * sizeof(float));
+
+    // Initialize host data
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < M; j++) {
+            h_a[i * M + j] = i * j;
+            h_b[j * M + i] = i + j;
+        }
+    }
+
+    // Copy data from host to device
+    cudaMemcpy(d_a, h_a, N * M * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_b, h_b, M * N * sizeof(float), cudaMemcpyHostToDevice);
+
+    // Set up CUDA parameters
+    int a_size = N;
+    int b_size = M;
+    int c_size = N;
+
+    dim3 blockSize(256, 1);
+    dim3 gridSize((a_size + blockSize.x - 1) / blockSize.x, (b_size + blockSize.y - 1) / blockSize.y);
+
+    // Launch kernel on GPU
+    matMulKernel<<<gridSize, blockSize>>>(d_a, d_b, d_c);
+
+    // Copy result from device to host
+    cudaMemcpy(h_c, d_c, N * M * sizeof(float), cudaMemcpyDeviceToHost);
+
+    // Print results
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < M; j++) {
+            printf("%f + %f = %f\n", h_a[i * M + j], h_b[j * M + i], h_c[i * M + j]);
+        }
+    }
+
+    // Free device memory
+    cudaFree(d_a);
+    cudaFree(d_b);
+    cudaFree(d_c);
+
+    // Free host memory
+    free(h_a);
+    free(h_b);
+    free(h_c);
+
+    return 0;
+}
+```
+This example demonstrates a CUDA program that performs matrix multiplication using two kernel functions.
+
+Note: These examples are simplified and not intended for production use. In real-world applications, you would need to handle errors, memory management, and other complexities of working with CUDA.
+
+
